@@ -10,14 +10,31 @@ Purpose
 Allow to export a struct into a file 
 Allow to import a file into a struct
 
-restriction : it works only for kind : struct, string, int, uint, float and bool
+notes: 
+- it works only for the following types : string, int, uint, bool and struct
+- fields with other types are ignored
 
 go get github.com/thomassilvi/GoSimpleConfigLib
 
 Export overview
 ---------------
 
- TODO
+type MyConfigType struct {
+	Name	string
+	Age	uint8
+	Address struct {
+		City	string
+	}
+}
+
+myconfig := MyConfigType { Name: "Roger Rabbit", Age: 20, Address { City: "ToonTown" } }
+err := WriteConfig("conf/myappname.conf", myconfig)
+
+will produce
+
+Name = Roger Rabbit
+Age = 20
+Address.City = ToonTown
 
 
 Import overview
