@@ -1,0 +1,8 @@
+AppName = MyWebApp
+Web.Hostname = 127.0.0.1
+Web.Port = 8000
+Database.Hostname = 127.0.0.1
+Database.Port = 6000
+Database.Name = mywebapp_dev_db
+Database.Login = guest
+Database.Password = test

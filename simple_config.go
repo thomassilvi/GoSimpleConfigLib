@@ -21,18 +21,14 @@ along with Foobar. If not, see <http://www.gnu.org/licenses/>.
 package simple_config
 
 import (
+	"bufio"
 	"errors"
+	"io"
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
 )
-
-//-------------------------------------------------------------------------------------------------
-
-func ReadConfig(filename string) error {
-
-	return errors.New("TODO")
-}
 
 //-------------------------------------------------------------------------------------------------
 
@@ -73,75 +69,125 @@ func generateConfigLines(keyprefix string, c reflect.Value) (result []string) {
 	for i := 0; i < c.NumField(); i++ {
 		fieldTmp := c.Field(i)
 		prefixTmp = keyprefix + typeOfConfig.Field(i).Name
-		switch fieldTmp.Kind() {
-		case reflect.Bool:
+		k := fieldTmp.Kind()
+
+		switch {
+		case k == reflect.Bool:
 			{
 				valueTmp = strconv.FormatBool(fieldTmp.Bool())
 				result = append(result, prefixTmp+" = "+valueTmp)
 			}
-		case reflect.Int:
+		case k >= reflect.Int && k <= reflect.Int64:
 			{
 				valueTmp = strconv.FormatInt(fieldTmp.Int(), 10)
 				result = append(result, prefixTmp+" = "+valueTmp)
 			}
-		case reflect.Int8:
-			{
-				valueTmp = strconv.FormatInt(fieldTmp.Int(), 10)
-				result = append(result, prefixTmp+" = "+valueTmp)
-			}
-		case reflect.Int16:
-			{
-				valueTmp = strconv.FormatInt(fieldTmp.Int(), 10)
-				result = append(result, prefixTmp+" = "+valueTmp)
-			}
-		case reflect.Int32:
-			{
-				valueTmp = strconv.FormatInt(fieldTmp.Int(), 10)
-				result = append(result, prefixTmp+" = "+valueTmp)
-			}
-		case reflect.Int64:
-			{
-				valueTmp = strconv.FormatInt(fieldTmp.Int(), 10)
-				result = append(result, prefixTmp+" = "+valueTmp)
-			}
-		case reflect.Uint:
+		case k >= reflect.Uint && k <= reflect.Uint64:
 			{
 				valueTmp = strconv.FormatUint(fieldTmp.Uint(), 10)
 				result = append(result, prefixTmp+" = "+valueTmp)
 			}
-		case reflect.Uint8:
-			{
-				valueTmp = strconv.FormatUint(fieldTmp.Uint(), 10)
-				result = append(result, prefixTmp+" = "+valueTmp)
-			}
-		case reflect.Uint16:
-			{
-				valueTmp = strconv.FormatUint(fieldTmp.Uint(), 10)
-				result = append(result, prefixTmp+" = "+valueTmp)
-			}
-		case reflect.Uint32:
-			{
-				valueTmp = strconv.FormatUint(fieldTmp.Uint(), 10)
-				result = append(result, prefixTmp+" = "+valueTmp)
-			}
-		case reflect.Uint64:
-			{
-				valueTmp = strconv.FormatUint(fieldTmp.Uint(), 10)
-				result = append(result, prefixTmp+" = "+valueTmp)
-			}
-		case reflect.String:
+		case k == reflect.String:
 			{
 				result = append(result, prefixTmp+" = "+fieldTmp.String())
 			}
-		case reflect.Struct:
+		case k == reflect.Struct:
 			{
 				result = append(result, generateConfigLines(prefixTmp+".", fieldTmp)...)
 			}
 			// default not handled
 		}
+
 	}
 
 	return result
+}
+
+//-------------------------------------------------------------------------------------------------
+
+func getKeyValue(line string) (found bool, key, value string) {
+        if line[0] == '#' {
+                return false, "", ""
+        }
+        indexEqual := strings.Index(line, "=")
+        if indexEqual == -1 {
+                return false, "", ""
+        }
+        keyTmp := line[:indexEqual-1]
+        if keyTmp[0] == '#' {
+                return false, "", ""
+        }
+        valueTmp := line[indexEqual+1 : len(line)-1]
+        keyTmp = strings.Trim(keyTmp, " ")
+        valueTmp = strings.Trim(valueTmp, " ")
+        return true, keyTmp, valueTmp
+}
+
+//-------------------------------------------------------------------------------------------------
+
+func ReadConfig(filename string, i interface{}) error {
+
+	if reflect.ValueOf(i).Kind() != reflect.Ptr {
+		return errors.New("not a ptr")
+	}
+	s := reflect.ValueOf(i).Elem()
+	if s.Kind() != reflect.Struct {
+		return errors.New("arg is not a ptr on a struct")
+	}
+
+        fileTmp, err := os.Open(filename)
+        if err != nil {
+                return err
+        }
+        defer fileTmp.Close()
+
+        var lineTmp, keyTmp, valueTmp string
+        var isConfig, fieldFound bool
+	var keysTmp []string
+	var fieldTmp reflect.Value
+
+        readerTmp := bufio.NewReader(fileTmp)
+        lineTmp, err = readerTmp.ReadString('\n')
+        if err != nil && err != io.EOF {
+                return err
+        }
+        for err == nil {
+
+                isConfig, keyTmp, valueTmp = getKeyValue(lineTmp)
+                if isConfig {
+			keysTmp = strings.Split(keyTmp, ".")
+			fieldFound = true
+			fieldTmp = s
+			for i:=0;i<len(keysTmp) && fieldFound;i++ {
+				if fieldTmp.Kind() == reflect.Struct {
+					fieldTmp = fieldTmp.FieldByName(keysTmp[i])
+				} else {
+					fieldFound = false
+					// TODO should we raise a warning ?
+				}
+			}
+			if fieldFound {
+				fieldKindTmp := fieldTmp.Kind()
+				switch {
+					case fieldKindTmp == reflect.String : {
+						fieldTmp.SetString(valueTmp)
+					}
+				}
+			} 
+			// TODO else should we raise a warning ?
+
+
+
+		}
+
+		// next line
+                lineTmp, err = readerTmp.ReadString('\n')
+                if err != nil && err != io.EOF {
+                        return err
+                }
+	}
+
+	return nil
 }
 
 //-------------------------------------------------------------------------------------------------

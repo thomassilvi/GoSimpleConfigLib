@@ -99,7 +99,14 @@ func Test_2_ConfigWrite(t *testing.T) {
 //-------------------------------------------------------------------------------------------------
 
 func Test_1_ConfigRead(t *testing.T) {
-	t.Errorf("TODO")
+	config1 := ConfigType1{}
+	err := ReadConfig("tests_input/config1.txt", &config1)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if config1.AppName != "MyWebApp" {
+		t.Errorf("config1.AppName is >" + config1.AppName + "< and not >MyWebApp<")
+	}
 }
 
 //-------------------------------------------------------------------------------------------------
