@@ -99,13 +99,23 @@ func Test_2_ConfigWrite(t *testing.T) {
 //-------------------------------------------------------------------------------------------------
 
 func Test_1_ConfigRead(t *testing.T) {
-	config1 := ConfigType1{}
-	err := ReadConfig("tests_input/config1.txt", &config1)
+
+	expectedConfig := ConfigType1{AppName: "MyWebApp"}
+	expectedConfig.Web.Hostname = "127.0.0.1"
+	expectedConfig.Web.Port = 8000
+	expectedConfig.Database.Hostname = "127.0.0.1"
+	expectedConfig.Database.Name = "mywebapp_dev_db"
+	expectedConfig.Database.Login = "guest"
+	expectedConfig.Database.Password = "test"
+	expectedConfig.Database.Port = 6000
+
+	config := ConfigType1{}
+	err := ReadConfig("tests_input/config1.txt", &config)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	if config1.AppName != "MyWebApp" {
-		t.Errorf("config1.AppName is >" + config1.AppName + "< and not >MyWebApp<")
+	if config != expectedConfig {
+		t.Errorf("config is :\n", config, "\nand not\n", expectedConfig)
 	}
 }
 

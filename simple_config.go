@@ -106,21 +106,78 @@ func generateConfigLines(keyprefix string, c reflect.Value) (result []string) {
 //-------------------------------------------------------------------------------------------------
 
 func getKeyValue(line string) (found bool, key, value string) {
-        if line[0] == '#' {
-                return false, "", ""
-        }
-        indexEqual := strings.Index(line, "=")
-        if indexEqual == -1 {
-                return false, "", ""
-        }
-        keyTmp := line[:indexEqual-1]
-        if keyTmp[0] == '#' {
-                return false, "", ""
-        }
-        valueTmp := line[indexEqual+1 : len(line)-1]
-        keyTmp = strings.Trim(keyTmp, " ")
-        valueTmp = strings.Trim(valueTmp, " ")
-        return true, keyTmp, valueTmp
+	if line[0] == '#' {
+		return false, "", ""
+	}
+	indexEqual := strings.Index(line, "=")
+	if indexEqual == -1 {
+		return false, "", ""
+	}
+	keyTmp := line[:indexEqual-1]
+	if keyTmp[0] == '#' {
+		return false, "", ""
+	}
+	valueTmp := line[indexEqual+1 : len(line)-1]
+	keyTmp = strings.Trim(keyTmp, " ")
+	valueTmp = strings.Trim(valueTmp, " ")
+	return true, keyTmp, valueTmp
+}
+
+//-------------------------------------------------------------------------------------------------
+
+func getParseError(k reflect.Kind, line string) error {
+	return errors.New("Parse error for " + k.String() + " with line:" + line)
+}
+
+//-------------------------------------------------------------------------------------------------
+
+func getBitSizeFromKind(k reflect.Kind) int {
+	result := 0
+
+	switch k {
+	case reflect.Int:
+		{
+			result = 0
+		}
+	case reflect.Int8:
+		{
+			result = 8
+		}
+	case reflect.Int16:
+		{
+			result = 16
+		}
+	case reflect.Int32:
+		{
+			result = 32
+		}
+	case reflect.Int64:
+		{
+			result = 64
+		}
+	case reflect.Uint:
+		{
+			result = 0
+		}
+	case reflect.Uint8:
+		{
+			result = 8
+		}
+	case reflect.Uint16:
+		{
+			result = 16
+		}
+	case reflect.Uint32:
+		{
+			result = 32
+		}
+	case reflect.Uint64:
+		{
+			result = 64
+		}
+	}
+
+	return result
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -135,56 +192,81 @@ func ReadConfig(filename string, i interface{}) error {
 		return errors.New("arg is not a ptr on a struct")
 	}
 
-        fileTmp, err := os.Open(filename)
-        if err != nil {
-                return err
-        }
-        defer fileTmp.Close()
+	fileTmp, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer fileTmp.Close()
 
-        var lineTmp, keyTmp, valueTmp string
-        var isConfig, fieldFound bool
+	var lineTmp, keyTmp, valueTmp string
+	var isConfig, fieldFound bool
 	var keysTmp []string
 	var fieldTmp reflect.Value
 
-        readerTmp := bufio.NewReader(fileTmp)
-        lineTmp, err = readerTmp.ReadString('\n')
-        if err != nil && err != io.EOF {
-                return err
-        }
-        for err == nil {
+	readerTmp := bufio.NewReader(fileTmp)
+	lineTmp, err = readerTmp.ReadString('\n')
+	if err != nil && err != io.EOF {
+		return err
+	}
+	for err == nil {
 
-                isConfig, keyTmp, valueTmp = getKeyValue(lineTmp)
-                if isConfig {
+		isConfig, keyTmp, valueTmp = getKeyValue(lineTmp)
+		if isConfig {
 			keysTmp = strings.Split(keyTmp, ".")
 			fieldFound = true
 			fieldTmp = s
-			for i:=0;i<len(keysTmp) && fieldFound;i++ {
+			for i := 0; i < len(keysTmp) && fieldFound; i++ {
 				if fieldTmp.Kind() == reflect.Struct {
 					fieldTmp = fieldTmp.FieldByName(keysTmp[i])
 				} else {
 					fieldFound = false
-					// TODO should we raise a warning ?
+					// TODO should we raise an error like invalid key
 				}
 			}
 			if fieldFound {
 				fieldKindTmp := fieldTmp.Kind()
 				switch {
-					case fieldKindTmp == reflect.String : {
+				case fieldKindTmp == reflect.String:
+					{
 						fieldTmp.SetString(valueTmp)
 					}
+				case fieldKindTmp == reflect.Bool:
+					{
+						boolTmp, err := strconv.ParseBool(valueTmp)
+						if err != nil {
+							return getParseError(fieldKindTmp, lineTmp)
+						}
+						fieldTmp.SetBool(boolTmp)
+					}
+				case fieldKindTmp >= reflect.Int && fieldKindTmp <= reflect.Int64:
+					{
+						bitSize := getBitSizeFromKind(fieldKindTmp)
+						intTmp, err := strconv.ParseInt(valueTmp, 10, bitSize)
+						if err != nil {
+							return getParseError(fieldKindTmp, lineTmp)
+						}
+						fieldTmp.SetInt(intTmp)
+					}
+				case fieldKindTmp >= reflect.Uint && fieldKindTmp <= reflect.Uint64:
+					{
+						bitSize := getBitSizeFromKind(fieldKindTmp)
+						uintTmp, err := strconv.ParseUint(valueTmp, 10, bitSize)
+						if err != nil {
+							return getParseError(fieldKindTmp, lineTmp)
+						}
+						fieldTmp.SetUint(uintTmp)
+					}
 				}
-			} 
-			// TODO else should we raise a warning ?
-
-
+			}
+			// TODO should we raise an error like invalid key
 
 		}
 
 		// next line
-                lineTmp, err = readerTmp.ReadString('\n')
-                if err != nil && err != io.EOF {
-                        return err
-                }
+		lineTmp, err = readerTmp.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return err
+		}
 	}
 
 	return nil
