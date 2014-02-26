@@ -12,6 +12,7 @@ Allow to import a file into a struct
 
 notes/restrictions: 
 - it works only for the following types : string, int, uint, bool and struct (fields with other types are ignored)
+- field name in the struct must begin by an uppercase (otherwise the field is not settable)
 - for import, if configuration structure does not contain a field defined in the config file, the setting is ignored
 - utf8 only
 
@@ -24,6 +25,7 @@ Configuration file syntax
 ```
 # comment
 FieldName = value
+FieldName1.FieldName11 = value
 
 ```
 

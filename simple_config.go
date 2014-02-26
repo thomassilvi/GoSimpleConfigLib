@@ -224,6 +224,10 @@ func ReadConfig(filename string, i interface{}) error {
 				}
 			}
 			if fieldFound {
+				if !fieldTmp.CanSet() {
+					return errors.New("can't set " + keyTmp)
+				}
+
 				fieldKindTmp := fieldTmp.Kind()
 				switch {
 				case fieldKindTmp == reflect.String:

@@ -43,19 +43,19 @@ type ConfigType1 struct {
 	Database DatabaseConfig
 }
 
-type ConfigType2 struct {
-	b   bool
-	i   int
-	i8  int8
-	i16 int16
-	i32 int32
-	i64 int64
-	u   uint
-	u8  uint8
-	u16 uint16
-	u32 uint32
-	u64 uint64
-	s   string
+type ConfigAllType struct {
+        S    string
+        I    int
+        B    bool
+        I8   int8
+        I16  int16
+        I32  int32
+        I64  int64
+        Ui   uint
+        Ui8  uint8
+        Ui16 uint16
+        Ui32 uint32
+        Ui64 uint64
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -68,29 +68,6 @@ func Test_1_ConfigWrite(t *testing.T) {
 		Login: "guest", Password: "guest"}
 	config1.Database = dbconfig
 	err := WriteConfig("tests_output/config1.txt", config1)
-	if err != nil {
-		t.Errorf(err.Error())
-	}
-}
-
-//-------------------------------------------------------------------------------------------------
-
-func Test_2_ConfigWrite(t *testing.T) {
-	config2 := ConfigType2{}
-	config2.b = true
-	config2.i = 0
-	config2.i8 = 127
-	config2.i16 = -32768
-	config2.i32 = 2147483647
-	config2.i64 = -9223372036854775808
-	config2.u = 0
-	config2.u8 = 255
-	config2.u16 = 65535
-	config2.u32 = 4294967295
-	config2.u64 = 18446744073709551615
-	config2.s = "Hello World !"
-
-	err := WriteConfig("tests_output/config2.txt", config2)
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -120,3 +97,70 @@ func Test_1_ConfigRead(t *testing.T) {
 }
 
 //-------------------------------------------------------------------------------------------------
+
+func Test_1_ExportImportConfigType1 (t *testing.T) {
+
+	filename := "tests_output/configtype1.conf"
+
+	expectedConfig := ConfigType1{AppName: "TestApp"}
+	expectedConfig.Web.Hostname = "www.test.org"
+	expectedConfig.Web.Port = 8765
+	dbconfig := DatabaseConfig{Hostname: "localhost", Port: 9000, Name: "testdb",
+		Login: "guest", Password: "guest"}
+	expectedConfig.Database = dbconfig
+	err := WriteConfig(filename, expectedConfig)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	config := ConfigType1{}
+	err = ReadConfig(filename, &config)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	if config != expectedConfig {
+		t.Errorf("config is :\n", config, "\nand not\n", expectedConfig)
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
+
+func Test_2_ExportImport (t *testing.T) {
+
+        filename := "tests_output/config2.txt"
+
+        expectedConfig := ConfigAllType{}
+
+        expectedConfig.S = "Hello World !"
+        expectedConfig.B = true
+        expectedConfig.I = 0
+        expectedConfig.I8 = 127
+        expectedConfig.I16 = -32768
+        expectedConfig.I32 = 2147483647
+        expectedConfig.I64 = -9223372036854775808
+        expectedConfig.Ui = 0
+        expectedConfig.Ui8 = 255
+        expectedConfig.Ui16 = 65535
+        expectedConfig.Ui32 = 4294967295
+        expectedConfig.Ui64 = 18446744073709551615
+
+        err := WriteConfig(filename, expectedConfig)
+        if err != nil {
+                t.Errorf(err.Error())
+        }
+
+        config := ConfigAllType{}
+        err = ReadConfig(filename, &config)
+        if err != nil {
+                t.Errorf(err.Error())
+        }
+
+        if config != expectedConfig {
+                t.Errorf("config is :\n", config, "\nand not\n", expectedConfig)
+        }
+
+}
+
+//-------------------------------------------------------------------------------------------------
+
