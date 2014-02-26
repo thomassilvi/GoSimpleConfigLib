@@ -7,12 +7,11 @@ development in progress, no stable release yet
 Purpose
 -------
 
-Allow to export a struct into a file 
-Allow to import a file into a struct
+Allow to export a struct into a file and to import a file into a struct
 
 notes/restrictions: 
-- it works only for the following types : string, int, uint, bool and struct (fields with other types are ignored)
 - field name in the struct must begin by an uppercase (otherwise the field is not settable)
+- it works only for the following types : string, int, uint, bool and struct (fields with other types are ignored)
 - for import, if configuration structure does not contain a field defined in the config file, the setting is ignored
 - utf8 only
 
@@ -38,48 +37,77 @@ Example:
 
 ```
 
+package main
+
+import (
+        "github.com/thomassilvi/GoSimpleConfigLib"
+        "log"
+)
+
 type MyConfigType struct {
-	Name	string
-	Age	uint8
-	Address struct {
-		City	string
-	}
+        DebugEnabled    bool
+        Log struct {
+                File            string
+                Verbosity       uint8
+        }
 }
 
-myconfig := MyConfigType { Name: "Roger Rabbit", Age: 20, Address { City: "ToonTown" } }
-err := simple_config.WriteConfig("conf/myappname.conf", myconfig)
+
+func main() {
+        myconfig := MyConfigType {}
+        myconfig.DebugEnabled = true
+        myconfig.Log.File = "/var/log/myapp.log"
+        myconfig.Log.Verbosity = 3
+        err := simple_config.WriteConfig("myappname.conf", myconfig)
+        if err != nil {
+                log.Println(err)
+        }
+
+}
 
 ```
 
-will produce
+will generate the file myappname.conf with the following content
 
 ```
-
-Name = Roger Rabbit
-Age = 20
-Address.City = ToonTown
-
+DebugEnabled = true
+Log.File = /var/log/myapp.log
+Log.Verbosity = 3
 ```
 
 Import overview
 ---------------
 
-You must pass a reference to the config in order fields can be set.
+You must pass the reference of the configuration in order fields can be set.
 
 Example:
 
 ```
+package main
+
+import (
+        "github.com/thomassilvi/GoSimpleConfigLib"
+        "log"
+        "fmt"
+)
 
 type MyConfigType struct {
-	Name	string
-	Age	uint8
-	Address struct {
-		City	string
-	}
+        DebugEnabled    bool
+        Log struct {
+                File            string
+                Verbosity       uint8
+        }
 }
 
-myconfig := MyConfigType{}
-err := simple_config.ReadConfig("conf/myappname.conf", &myconfig)
+
+func main() {
+        myconfig := MyConfigType {}
+        err := simple_config.ReadConfig("myappname.conf", &myconfig)
+        if err != nil {
+                log.Println(err)
+        }
+        fmt.Println(myconfig)
+}
 
 ```
 

@@ -198,8 +198,8 @@ func ReadConfig(filename string, i interface{}) error {
 	}
 	defer fileTmp.Close()
 
-	var lineTmp, keyTmp, valueTmp string
-	var isConfig, fieldFound bool
+	var lineTmp, keyTmp, keyPartTmp, valueTmp string
+	var isConfig, fieldFound, isKeyValid bool
 	var keysTmp []string
 	var fieldTmp reflect.Value
 
@@ -215,7 +215,11 @@ func ReadConfig(filename string, i interface{}) error {
 			keysTmp = strings.Split(keyTmp, ".")
 			fieldFound = true
 			fieldTmp = s
-			for i := 0; i < len(keysTmp) && fieldFound; i++ {
+			isKeyValid = true
+			for i := 0; i < len(keysTmp) && fieldFound && isKeyValid; i++ {
+				keyPartTmp = keysTmp[i]
+				isKeyValid = (keyPartTmp[0] == strings.ToUpper(keyPartTmp)[0])
+
 				if fieldTmp.Kind() == reflect.Struct {
 					fieldTmp = fieldTmp.FieldByName(keysTmp[i])
 				} else {
@@ -223,9 +227,9 @@ func ReadConfig(filename string, i interface{}) error {
 					// TODO should we raise an error like invalid key
 				}
 			}
-			if fieldFound {
+			if fieldFound && isKeyValid {
 				if !fieldTmp.CanSet() {
-					return errors.New("can't set " + keyTmp)
+					return errors.New("Field is not settable : " + keyTmp)
 				}
 
 				fieldKindTmp := fieldTmp.Kind()
@@ -262,8 +266,8 @@ func ReadConfig(filename string, i interface{}) error {
 					}
 				}
 			}
-			// TODO should we raise an error like invalid key
-
+			// TODO should we raise error/warning if key not found
+			// TODO should we raise error/warning if key begin by a lowercase
 		}
 
 		// next line

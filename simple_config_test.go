@@ -44,18 +44,18 @@ type ConfigType1 struct {
 }
 
 type ConfigAllType struct {
-        S    string
-        I    int
-        B    bool
-        I8   int8
-        I16  int16
-        I32  int32
-        I64  int64
-        Ui   uint
-        Ui8  uint8
-        Ui16 uint16
-        Ui32 uint32
-        Ui64 uint64
+	S    string
+	I    int
+	B    bool
+	I8   int8
+	I16  int16
+	I32  int32
+	I64  int64
+	Ui   uint
+	Ui8  uint8
+	Ui16 uint16
+	Ui32 uint32
+	Ui64 uint64
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -98,7 +98,7 @@ func Test_1_ConfigRead(t *testing.T) {
 
 //-------------------------------------------------------------------------------------------------
 
-func Test_1_ExportImportConfigType1 (t *testing.T) {
+func Test_1_ExportImportConfigType1(t *testing.T) {
 
 	filename := "tests_output/configtype1.conf"
 
@@ -126,41 +126,40 @@ func Test_1_ExportImportConfigType1 (t *testing.T) {
 
 //-------------------------------------------------------------------------------------------------
 
-func Test_2_ExportImport (t *testing.T) {
+func Test_2_ExportImport(t *testing.T) {
 
-        filename := "tests_output/config2.txt"
+	filename := "tests_output/config2.txt"
 
-        expectedConfig := ConfigAllType{}
+	expectedConfig := ConfigAllType{}
 
-        expectedConfig.S = "Hello World !"
-        expectedConfig.B = true
-        expectedConfig.I = 0
-        expectedConfig.I8 = 127
-        expectedConfig.I16 = -32768
-        expectedConfig.I32 = 2147483647
-        expectedConfig.I64 = -9223372036854775808
-        expectedConfig.Ui = 0
-        expectedConfig.Ui8 = 255
-        expectedConfig.Ui16 = 65535
-        expectedConfig.Ui32 = 4294967295
-        expectedConfig.Ui64 = 18446744073709551615
+	expectedConfig.S = "Hello World !"
+	expectedConfig.B = true
+	expectedConfig.I = 0
+	expectedConfig.I8 = 127
+	expectedConfig.I16 = -32768
+	expectedConfig.I32 = 2147483647
+	expectedConfig.I64 = -9223372036854775808
+	expectedConfig.Ui = 0
+	expectedConfig.Ui8 = 255
+	expectedConfig.Ui16 = 65535
+	expectedConfig.Ui32 = 4294967295
+	expectedConfig.Ui64 = 18446744073709551615
 
-        err := WriteConfig(filename, expectedConfig)
-        if err != nil {
-                t.Errorf(err.Error())
-        }
+	err := WriteConfig(filename, expectedConfig)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 
-        config := ConfigAllType{}
-        err = ReadConfig(filename, &config)
-        if err != nil {
-                t.Errorf(err.Error())
-        }
+	config := ConfigAllType{}
+	err = ReadConfig(filename, &config)
+	if err != nil {
+		t.Errorf(err.Error())
+	}
 
-        if config != expectedConfig {
-                t.Errorf("config is :\n", config, "\nand not\n", expectedConfig)
-        }
+	if config != expectedConfig {
+		t.Errorf("config is :\n", config, "\nand not\n", expectedConfig)
+	}
 
 }
 
 //-------------------------------------------------------------------------------------------------
-
