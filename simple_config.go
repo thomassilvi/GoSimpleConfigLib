@@ -182,14 +182,14 @@ func getBitSizeFromKind(k reflect.Kind) int {
 
 //-------------------------------------------------------------------------------------------------
 
-func ReadConfig(filename string, i interface{}) error {
+func ReadConfig(filename string, configuration interface{}) error {
 
-	if reflect.ValueOf(i).Kind() != reflect.Ptr {
-		return errors.New("not a ptr")
+	if reflect.ValueOf(configuration).Kind() != reflect.Ptr {
+		return errors.New("configuration must be a pointer on a struct")
 	}
-	s := reflect.ValueOf(i).Elem()
+	s := reflect.ValueOf(configuration).Elem()
 	if s.Kind() != reflect.Struct {
-		return errors.New("arg is not a ptr on a struct")
+		return errors.New("configuration must be a pointer on a struct")
 	}
 
 	fileTmp, err := os.Open(filename)
@@ -199,7 +199,7 @@ func ReadConfig(filename string, i interface{}) error {
 	defer fileTmp.Close()
 
 	var lineTmp, keyTmp, keyPartTmp, valueTmp string
-	var isConfig, fieldFound, isKeyValid bool
+	var isConfig, fieldFound bool
 	var keysTmp []string
 	var fieldTmp reflect.Value
 
@@ -215,21 +215,22 @@ func ReadConfig(filename string, i interface{}) error {
 			keysTmp = strings.Split(keyTmp, ".")
 			fieldFound = true
 			fieldTmp = s
-			isKeyValid = true
-			for i := 0; i < len(keysTmp) && fieldFound && isKeyValid; i++ {
+			for i := 0; i < len(keysTmp) && fieldFound; i++ {
 				keyPartTmp = keysTmp[i]
-				isKeyValid = (keyPartTmp[0] == strings.ToUpper(keyPartTmp)[0])
+				if keyPartTmp[0] != strings.ToUpper(keyPartTmp)[0] {
+					return errors.New("Field name >" + keyPartTmp + "< is not settable as first letter is not uppercase")
+				}
 
 				if fieldTmp.Kind() == reflect.Struct {
 					fieldTmp = fieldTmp.FieldByName(keysTmp[i])
 				} else {
 					fieldFound = false
-					// TODO should we raise an error like invalid key
+					return errors.New(keyPartTmp + " does not correspond to a struct field")
 				}
 			}
-			if fieldFound && isKeyValid {
+			if fieldFound {
 				if !fieldTmp.CanSet() {
-					return errors.New("Field is not settable : " + keyTmp)
+					return errors.New("Field >" + keyTmp + "< is not settable")
 				}
 
 				fieldKindTmp := fieldTmp.Kind()
@@ -265,9 +266,9 @@ func ReadConfig(filename string, i interface{}) error {
 						fieldTmp.SetUint(uintTmp)
 					}
 				}
+			} else {
+				return errors.New("Field >" + keyTmp + "< can not be found")
 			}
-			// TODO should we raise error/warning if key not found
-			// TODO should we raise error/warning if key begin by a lowercase
 		}
 
 		// next line
