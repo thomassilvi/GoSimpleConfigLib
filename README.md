@@ -1,7 +1,7 @@
 GoSimpleConfigLib
 =================
 
-development in progress, no stable release yet
+latest current release : 1.0.0
 
 
 Purpose
@@ -17,9 +17,12 @@ notes/restrictions:
 
 go get github.com/thomassilvi/GoSimpleConfigLib
 
+note: I did this lib for my own learning experience. So basically some defects can exist.
 
 Configuration file syntax
 -------------------------
+
+Lines beginning with # are considered as comment
 
 ```
 # comment
