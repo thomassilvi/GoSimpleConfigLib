@@ -30,6 +30,11 @@ import (
 	"strings"
 )
 
+var (
+	ErrArgNotStructOrPtrStruct = errors.New("config parameter is not a struct or a pointer on a struct")
+	ErrArgNotPtrOnStruct       = errors.New("config parameter is not a pointer on a struct")
+)
+
 //-------------------------------------------------------------------------------------------------
 
 func WriteConfig(filename string, config interface{}) error {
@@ -38,7 +43,7 @@ func WriteConfig(filename string, config interface{}) error {
 		c = c.Elem()
 	}
 	if c.Type().Kind() != reflect.Struct {
-		return errors.New("config parameter is not a struct")
+		return ErrArgNotStructOrPtrStruct
 	}
 
 	fileTmp, err := os.OpenFile(filename, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
@@ -185,11 +190,11 @@ func getBitSizeFromKind(k reflect.Kind) int {
 func ReadConfig(filename string, configuration interface{}) error {
 
 	if reflect.ValueOf(configuration).Kind() != reflect.Ptr {
-		return errors.New("configuration must be a pointer on a struct")
+		return ErrArgNotPtrOnStruct
 	}
 	s := reflect.ValueOf(configuration).Elem()
 	if s.Kind() != reflect.Struct {
-		return errors.New("configuration must be a pointer on a struct")
+		return ErrArgNotPtrOnStruct
 	}
 
 	fileTmp, err := os.Open(filename)

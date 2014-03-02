@@ -163,3 +163,20 @@ func Test_2_ExportImport(t *testing.T) {
 }
 
 //-------------------------------------------------------------------------------------------------
+
+func Test_1_Errors(t *testing.T) {
+	var err error
+	filename := "tests_output/fake_config.txt"
+	config := 1
+
+	err = WriteConfig(filename, config)
+	if err != ErrArgNotStructOrPtrStruct {
+		t.Error("ErrArgNotStructOrPtrStruct should be returned")
+	}
+	err = ReadConfig(filename, config)
+	if err != ErrArgNotPtrOnStruct {
+		t.Error("ErrArgNotPtrOnStruct should be returned")
+	}
+}
+
+//-------------------------------------------------------------------------------------------------
