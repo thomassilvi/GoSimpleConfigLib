@@ -1,0 +1,5 @@
+# tests for unsettable field 
+
+A = 3
+b = 2
+

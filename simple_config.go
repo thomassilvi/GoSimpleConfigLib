@@ -30,12 +30,58 @@ import (
 	"strings"
 )
 
+//#################################################################################################
+// definition of error with comment
+//#################################################################################################
+
+type Error interface {
+	error
+	Comment() string
+}
+
+type SimpleConfigError struct {
+	err     string
+	comment string
+}
+
+//-------------------------------------------------------------------------------------------------
+
+func (e *SimpleConfigError) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+	return e.err
+}
+
+//-------------------------------------------------------------------------------------------------
+
+func (e *SimpleConfigError) Comment() string {
+	if e == nil {
+		return "<nil>"
+	}
+	return e.comment
+}
+
+//-------------------------------------------------------------------------------------------------
+
+func toError(e error) Error {
+	return &SimpleConfigError{e.Error(), ""}
+}
+
+//-------------------------------------------------------------------------------------------------
+
 var (
 	ErrArgNotStructOrPtrStruct = errors.New("config parameter is not a struct or a pointer on a struct")
 	ErrArgNotPtrOnStruct       = errors.New("config parameter is not a pointer on a struct")
+	ErrParse                   = &SimpleConfigError{"parse error", ""}
+	ErrFieldNotFound           = &SimpleConfigError{"field not found", ""}
+	ErrNotStructField          = &SimpleConfigError{"field is not a struct", ""}
+	ErrFieldNotSettable        = &SimpleConfigError{"field is not settable", ""}
 )
 
-//-------------------------------------------------------------------------------------------------
+//#################################################################################################
+// Config writer & reader
+//#################################################################################################
 
 func WriteConfig(filename string, config interface{}) error {
 	c := reflect.ValueOf(config)
@@ -130,8 +176,9 @@ func getKeyValue(line string) (found bool, key, value string) {
 
 //-------------------------------------------------------------------------------------------------
 
-func getParseError(k reflect.Kind, line string) error {
-	return errors.New("Parse error for " + k.String() + " with line:" + line)
+func getParseError(k reflect.Kind, line string) Error {
+	ErrParse.comment = "Parse error for " + k.String() + " with line:" + line
+	return ErrParse
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -188,6 +235,7 @@ func getBitSizeFromKind(k reflect.Kind) int {
 //-------------------------------------------------------------------------------------------------
 
 func ReadConfig(filename string, configuration interface{}) error {
+	readConfigError := new(SimpleConfigError)
 
 	if reflect.ValueOf(configuration).Kind() != reflect.Ptr {
 		return ErrArgNotPtrOnStruct
@@ -204,7 +252,7 @@ func ReadConfig(filename string, configuration interface{}) error {
 	defer fileTmp.Close()
 
 	var lineTmp, keyTmp, keyPartTmp, valueTmp string
-	var isConfig, fieldFound bool
+	var isConfig, fieldNotFound bool
 	var keysTmp []string
 	var fieldTmp reflect.Value
 
@@ -218,61 +266,73 @@ func ReadConfig(filename string, configuration interface{}) error {
 		isConfig, keyTmp, valueTmp = getKeyValue(lineTmp)
 		if isConfig {
 			keysTmp = strings.Split(keyTmp, ".")
-			fieldFound = true
+			fieldNotFound = true
 			fieldTmp = s
-			for i := 0; i < len(keysTmp) && fieldFound; i++ {
+			for i := 0; i < len(keysTmp) && fieldNotFound; i++ {
 				keyPartTmp = keysTmp[i]
 				if keyPartTmp[0] != strings.ToUpper(keyPartTmp)[0] {
-					return errors.New("Field name >" + keyPartTmp + "< is not settable as first letter is not uppercase")
+					readConfigError = ErrFieldNotSettable
+					readConfigError.comment = "Field name >" + keyPartTmp + "< is not settable as first letter is not uppercase"
+					return readConfigError
 				}
 
 				if fieldTmp.Kind() == reflect.Struct {
 					fieldTmp = fieldTmp.FieldByName(keysTmp[i])
+					if i == len(keysTmp)-1 {
+						fieldNotFound = !fieldTmp.IsValid()
+					}
 				} else {
-					fieldFound = false
-					return errors.New(keyPartTmp + " does not correspond to a struct field")
+					readConfigError = ErrNotStructField
+					readConfigError.comment = keyPartTmp + " does not correspond to a struct field"
+					return readConfigError
 				}
 			}
-			if fieldFound {
-				if !fieldTmp.CanSet() {
-					return errors.New("Field >" + keyTmp + "< is not settable")
-				}
 
-				fieldKindTmp := fieldTmp.Kind()
-				switch {
-				case fieldKindTmp == reflect.String:
-					{
-						fieldTmp.SetString(valueTmp)
-					}
-				case fieldKindTmp == reflect.Bool:
-					{
-						boolTmp, err := strconv.ParseBool(valueTmp)
-						if err != nil {
-							return getParseError(fieldKindTmp, lineTmp)
-						}
-						fieldTmp.SetBool(boolTmp)
-					}
-				case fieldKindTmp >= reflect.Int && fieldKindTmp <= reflect.Int64:
-					{
-						bitSize := getBitSizeFromKind(fieldKindTmp)
-						intTmp, err := strconv.ParseInt(valueTmp, 10, bitSize)
-						if err != nil {
-							return getParseError(fieldKindTmp, lineTmp)
-						}
-						fieldTmp.SetInt(intTmp)
-					}
-				case fieldKindTmp >= reflect.Uint && fieldKindTmp <= reflect.Uint64:
-					{
-						bitSize := getBitSizeFromKind(fieldKindTmp)
-						uintTmp, err := strconv.ParseUint(valueTmp, 10, bitSize)
-						if err != nil {
-							return getParseError(fieldKindTmp, lineTmp)
-						}
-						fieldTmp.SetUint(uintTmp)
-					}
+			if fieldNotFound {
+				readConfigError = ErrFieldNotFound
+				readConfigError.comment = "Field >" + keyTmp + "< can not be found"
+				return readConfigError
+			}
+
+			if !fieldTmp.CanSet() {
+				readConfigError = ErrFieldNotSettable
+				readConfigError.comment = "Field >" + keyTmp + "< is not settable"
+				return readConfigError
+			}
+
+			fieldKindTmp := fieldTmp.Kind()
+			switch {
+
+			case fieldKindTmp == reflect.String:
+				{
+					fieldTmp.SetString(valueTmp)
 				}
-			} else {
-				return errors.New("Field >" + keyTmp + "< can not be found")
+			case fieldKindTmp == reflect.Bool:
+				{
+					boolTmp, err := strconv.ParseBool(valueTmp)
+					if err != nil {
+						return getParseError(fieldKindTmp, lineTmp)
+					}
+					fieldTmp.SetBool(boolTmp)
+				}
+			case fieldKindTmp >= reflect.Int && fieldKindTmp <= reflect.Int64:
+				{
+					bitSize := getBitSizeFromKind(fieldKindTmp)
+					intTmp, err := strconv.ParseInt(valueTmp, 10, bitSize)
+					if err != nil {
+						return getParseError(fieldKindTmp, lineTmp)
+					}
+					fieldTmp.SetInt(intTmp)
+				}
+			case fieldKindTmp >= reflect.Uint && fieldKindTmp <= reflect.Uint64:
+				{
+					bitSize := getBitSizeFromKind(fieldKindTmp)
+					uintTmp, err := strconv.ParseUint(valueTmp, 10, bitSize)
+					if err != nil {
+						return getParseError(fieldKindTmp, lineTmp)
+					}
+					fieldTmp.SetUint(uintTmp)
+				}
 			}
 		}
 

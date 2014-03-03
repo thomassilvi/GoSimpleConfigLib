@@ -58,6 +58,11 @@ type ConfigAllType struct {
 	Ui64 uint64
 }
 
+type ConfigType2 struct {
+	A	int
+	b	int
+}
+
 //-------------------------------------------------------------------------------------------------
 
 func Test_1_ConfigWrite(t *testing.T) {
@@ -180,3 +185,64 @@ func Test_1_Errors(t *testing.T) {
 }
 
 //-------------------------------------------------------------------------------------------------
+
+func Test_2_Errors(t *testing.T) {
+	filename := "tests_input/config3.txt"
+	config := ConfigType1{}
+	err := ReadConfig(filename, &config)
+	if (err == nil) || (err.Error() != ErrParse.Error()) {
+		t.Error("Parse error expected")
+	}
+	err2, ok := err.(Error)
+	if !ok {
+		t.Error("Error with interface <Error> expected")
+	}
+	if err2.Comment() == "" {
+		t.Error("Non empty comment expected")
+	}
+	t.Log("Comment:" + err2.Comment())
+}
+
+//-------------------------------------------------------------------------------------------------
+
+func Test_3_Errors(t *testing.T) {
+	filename := "tests_input/config4.txt"
+	config := ConfigType1{}
+	err := ReadConfig(filename, &config)
+
+	if (err == nil) || (err.Error() != ErrFieldNotFound.Error()) {
+		t.Error("Field not found error expected instead of >" + err.Error() + "<")
+	}
+	err2, ok := err.(Error)
+	if !ok {
+		t.Error("Error with interface <Error> expected")
+	}
+	if err2.Comment() == "" {
+		t.Error("Non empty comment expected")
+	}
+	t.Log("Comment:" + err2.Comment())
+}
+
+//-------------------------------------------------------------------------------------------------
+
+func Test_4_Errors(t *testing.T) {
+	filename := "tests_input/config5.txt"
+	config := ConfigType2{}
+	err := ReadConfig(filename, &config)
+
+	if (err == nil) || (err.Error() != ErrFieldNotSettable.Error()) {
+		t.Error("Field not settable error expected instead of >" + err.Error() + "<")
+	}
+	err2, ok := err.(Error)
+	if !ok {
+		t.Error("Error with interface <Error> expected")
+	}
+	if err2.Comment() == "" {
+		t.Error("Non empty comment expected")
+	}
+	t.Log("Comment:" + err2.Comment())
+}
+
+//-------------------------------------------------------------------------------------------------
+
+
